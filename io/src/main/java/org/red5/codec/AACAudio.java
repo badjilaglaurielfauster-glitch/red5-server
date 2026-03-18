@@ -82,7 +82,7 @@ public class AACAudio extends AbstractAudio {
                     }
                     channels = (blockDataAACDCR[3] & 0x78) >> 3;
                     sampleRate = AAC_SAMPLERATES[freqIndex];
-                    log.info("aac config sample rate {} type {} channels {}", sampleRate, objectType, channels);
+                    log.debug("aac config sample rate {} type {} channels {}", sampleRate, objectType, channels);
                 } else {
                     // maybe mark that we weren't a config packet?
                 }
