@@ -14,7 +14,7 @@ import java.util.TreeSet;
 import junit.framework.TestCase;
 
 import org.apache.mina.core.buffer.IoBuffer;
-import org.red5.cache.impl.NoCacheImpl;
+import org.red5.cache.impl.NoCacheImplSingleton;
 import org.red5.io.ITag;
 import org.red5.io.ITagReader;
 import org.red5.io.ITagWriter;
@@ -70,7 +70,7 @@ public class CuePointInjectionTest extends TestCase {
         //assertTrue(readfile.exists());
 
         IFLV readflv = (IFLV) service.getStreamableFile(readfile);
-        readflv.setCache(NoCacheImpl.getInstance());
+        readflv.setCache(NoCacheImplSingleton.getInstance());
 
         // Grab a reader for reading a FLV in
         ITagReader reader = readflv.getReader();

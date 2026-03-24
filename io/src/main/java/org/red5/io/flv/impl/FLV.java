@@ -18,7 +18,7 @@ import java.util.Set;
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.cache.ICacheStore;
 import org.red5.cache.ICacheable;
-import org.red5.cache.impl.NoCacheImpl;
+import org.red5.cache.impl.NoCacheImplSingleton;
 import org.red5.io.ITag;
 import org.red5.io.ITagReader;
 import org.red5.io.ITagWriter;
@@ -251,8 +251,8 @@ public class FLV implements IFLV {
         String fileName = file.getName();
         // if no cache is set an NPE will be thrown
         if (cache == null) {
-            log.info("FLV cache is null, forcing NoCacheImpl instance");
-            cache = NoCacheImpl.getInstance();
+            log.info("FLV cache is null, forcing NoCacheImplSingleton instance");
+            cache = NoCacheImplSingleton.getInstance();
         }
         ICacheable ic = cache.get(fileName);
         // look in the cache before reading the file from the disk

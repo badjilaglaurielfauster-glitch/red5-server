@@ -12,7 +12,7 @@ import java.io.IOException;
 
 import junit.framework.TestCase;
 
-import org.red5.cache.impl.NoCacheImpl;
+import org.red5.cache.impl.NoCacheImplSingleton;
 import org.red5.io.flv.IFLV;
 import org.red5.io.flv.meta.ICueType;
 import org.red5.io.flv.meta.IMetaCue;
@@ -59,7 +59,7 @@ public class MetaServiceTest extends TestCase {
         MetaData<?, ?> meta = createMeta();
         // Read in a FLV file for reading tags
         IFLV flv = (IFLV) service.getStreamableFile(f);
-        flv.setCache(NoCacheImpl.getInstance());
+        flv.setCache(NoCacheImplSingleton.getInstance());
         // set the MetaService
         flv.setMetaService(metaService);
         // set the MetaData

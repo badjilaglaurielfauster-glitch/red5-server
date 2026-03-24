@@ -37,7 +37,7 @@ This document provides practical examples of using the Caffeine-based caching sy
 
 ```xml
 <!-- No caching - useful for debugging -->
-<bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+<bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingleton"/>
 ```
 
 ## Programmatic Cache Access
@@ -381,7 +381,7 @@ public class CacheHealthMonitor {
 
 ```xml
 <!-- No caching for development -->
-<bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+<bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingleton"/>
 ```
 
 ## Best Practices

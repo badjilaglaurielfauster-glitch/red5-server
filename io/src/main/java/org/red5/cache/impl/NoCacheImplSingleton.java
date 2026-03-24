@@ -25,18 +25,18 @@ import org.springframework.context.ApplicationContextAware;
  * @author The Red5 Project
  * @author Paul Gregoire (mondain@gmail.com)
  */
-public class NoCacheImpl implements ICacheStore, ApplicationContextAware {
+public class NoCacheImplSingleton implements ICacheStore, ApplicationContextAware {
 
     /** Constant <code>log</code> */
-    protected static Logger log = LoggerFactory.getLogger(NoCacheImpl.class);
+    protected static Logger log = LoggerFactory.getLogger(NoCacheImplSingleton.class);
 
-    private static NoCacheImpl instance = new NoCacheImpl();
+    private static NoCacheImplSingleton instance = new NoCacheImplSingleton();
 
-    /** Do not instantiate NoCacheImpl. */
+    /** Do not instantiate NoCacheImplSingleton. */
     /*
      * This constructor helps to ensure that we are singleton.
      */
-    private NoCacheImpl() {
+    private NoCacheImplSingleton() {
     }
 
     /**
@@ -44,7 +44,7 @@ public class NoCacheImpl implements ICacheStore, ApplicationContextAware {
      *
      * @return class instance
      */
-    public static NoCacheImpl getInstance() {
+    public static NoCacheImplSingleton getInstance() {
         return instance;
     }
 
@@ -56,7 +56,7 @@ public class NoCacheImpl implements ICacheStore, ApplicationContextAware {
     @SuppressWarnings("null")
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
-        NoCacheImpl.applicationContext = context;
+        NoCacheImplSingleton.applicationContext = context;
     }
 
     /**

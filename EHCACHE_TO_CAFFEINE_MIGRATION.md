@@ -157,7 +157,7 @@ After migration:
 #### No Caching (Default)
 ```xml
 <!-- No caching - useful for development/debugging -->
-<bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+<bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingleton"/>
 ```
 
 #### Large Cache with Statistics
@@ -349,7 +349,7 @@ If you encounter issues during migration:
 ### Development/Testing (No Cache)
 
 ```xml
-<bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+<bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingleton"/>
 ```
 
 ---

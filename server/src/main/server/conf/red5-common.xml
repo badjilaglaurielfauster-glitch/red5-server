@@ -108,11 +108,11 @@
 
     <!--
     Now we can load the cache engine, only one may be enabled at a time. If no-caching is required select the
-    NoCacheImpl. Alternative implementations include CaffeineCacheImpl (recommended) and CacheImpl (simple HashMap-based).
+    NoCacheImplSingleton. Alternative implementations include CaffeineCacheImpl (recommended) and CacheImpl (simple HashMap-based).
     Note: EhCacheImpl was deprecated and removed.
 
     Examples:
-    <bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+    <bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingletonSingleton"/>
 
     <bean id="object.cache" class="org.red5.cache.impl.CaffeineCacheImpl" init-method="init" destroy-method="destroy">
         <property name="maxEntries" value="1000"/>
@@ -120,7 +120,7 @@
         <property name="recordStats" value="true"/>
     </bean>
     -->
-    <bean id="object.cache" class="org.red5.cache.impl.NoCacheImpl"/>
+    <bean id="object.cache" class="org.red5.cache.impl.NoCacheImplSingleton"/>
 
     <!-- Cache to use for keyframe metadata -->
     <bean id="keyframe.cache" class="org.red5.io.CachingFileKeyFrameMetaCache">

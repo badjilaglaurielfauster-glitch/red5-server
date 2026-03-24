@@ -147,7 +147,7 @@
     </bean>
     <!--
 	Now we can load the cache engine, only one may be enabled at a time. If no-caching is required select the
-	NoCacheImpl. Three other implementations based on EhCache, WhirlyCache, and Red5Cache are also available.
+	NoCacheImplSingleton. Three other implementations based on EhCache, WhirlyCache, and Red5Cache are also available.
 
 
     -->

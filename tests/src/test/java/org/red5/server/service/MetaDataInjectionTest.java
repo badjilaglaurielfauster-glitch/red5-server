@@ -14,7 +14,7 @@ import java.util.TreeSet;
 import junit.framework.TestCase;
 
 import org.apache.mina.core.buffer.IoBuffer;
-import org.red5.cache.impl.NoCacheImpl;
+import org.red5.cache.impl.NoCacheImplSingleton;
 import org.red5.io.ITag;
 import org.red5.io.ITagReader;
 import org.red5.io.ITagWriter;
@@ -71,7 +71,7 @@ public class MetaDataInjectionTest extends TestCase {
         // Create a reader for testing
         File readfile = new File(path);
         IFLV readflv = (IFLV) service.getStreamableFile(readfile);
-        readflv.setCache(NoCacheImpl.getInstance());
+        readflv.setCache(NoCacheImplSingleton.getInstance());
 
         // Grab a reader for reading a FLV in
         ITagReader reader = readflv.getReader();
