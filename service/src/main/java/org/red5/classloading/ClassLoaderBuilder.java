@@ -239,7 +239,7 @@ public final class ClassLoaderBuilder {
     private static Set<URL> collectUrls(Path path, int mode) {
         Set<URL> urlList = new HashSet<>();
         addPath(urlList, path);
-        
+
         if (mode == USE_CLASSPATH_LIB) {
             addClasspath(urlList);
         }
@@ -255,7 +255,7 @@ public final class ClassLoaderBuilder {
      *
      * @return the Red5 home path
      */
-    private static Path resolveRed5Home() {
+    public static Path resolveRed5Home() {
         String home = System.getProperty("red5.root", System.getenv("RED5_HOME"));
 
         if (home != null) {
@@ -404,7 +404,7 @@ public final class ClassLoaderBuilder {
      * @param v2 second version
      * @return positive if v1 > v2, negative if v1 < v2, 0 if equal
      */
-    private static int compareVersions(String v1, String v2) {
+    public static int compareVersions(String v1, String v2) {
         String[] a = v1.split("\\.");
         String[] b = v2.split("\\.");
 
@@ -431,7 +431,7 @@ public final class ClassLoaderBuilder {
      *
      * @param list collection of library URLs
      */
-    private static void scrubURLList(Collection<URL> list) {
+    public static void scrubURLList(Collection<URL> list) {
         Set<URL> toRemove = new HashSet<>();
 
         for (URL u1 : list) {
