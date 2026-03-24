@@ -169,7 +169,7 @@ public class RTMPTClientConnector extends Thread {
         return sessionId;
     }
 
-    private RTMPTClientConnection openConnection() throws IOException {
+    protected RTMPTClientConnection openConnection() throws IOException {
         RTMPTClientConnection conn = null;
         HttpPost openPost = getPost("/open/1");
         setCommonHeaders(openPost);
