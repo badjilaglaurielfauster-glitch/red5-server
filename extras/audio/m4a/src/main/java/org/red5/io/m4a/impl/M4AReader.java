@@ -475,8 +475,7 @@ public class M4AReader implements IoConstants, ITagReader {
         try {
             return dataSource.position();
         } catch (Exception e) {
-            log.error("Error getCurrentPosition", e);
-            return 0;
+            throw new NoDataSourceException("Error getCurrentPosition :" + e.getMesage())
         }
     }
 
