@@ -1,6 +1,7 @@
 package org.red5.client.net.rtmp;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedTransferQueue;
@@ -83,16 +84,25 @@ abstract class PublisherTest {
         String userDir = System.getProperty("user.dir");
         log.info("User dir: {}", userDir);
         String sourceMediaFile = System.getProperty("source.media.file", "bbb_480p25.flv");
-        if (userDir.contains("/tests")) {
-            reader = new FLVReader(new File(userDir + "/src/test/resources/fixtures", sourceMediaFile));
-        } else {
-            // Try different paths for H.264 content
-            File h264File = new File(userDir + "/tests/src/test/resources/fixtures", sourceMediaFile);
-            if (!h264File.exists()) {
-                h264File = new File(userDir + "/io/src/test/resources/fixtures", sourceMediaFile);
+        String[] paths = {
+                userDir + "/src/test/resources/fixtures/" + sourceMediaFile,
+                userDir + "/tests/src/test/resources/fixtures/" + sourceMediaFile,
+                userDir + "/io/src/test/resources/fixtures/" + sourceMediaFile,
+                userDir + "/red5-server/tests/src/test/resources/fixtures/" + sourceMediaFile
+        };
+        File finalFile = null;
+        for (String p : paths) {
+            File f = new File(p);
+            if (f.exists()) {
+                finalFile = f;
+                break;
             }
-            reader = new FLVReader(h264File);
         }
+
+        if (finalFile == null) {
+            throw new FileNotFoundException("Impossible de trouver la fixture FLV dans les chemins explorés.");
+        }
+        reader = new FLVReader(finalFile);
         // Read FLV synchronously to ensure queue is populated before streaming starts
         log.info("Reading FLV file and populating queue...");
         while (reader.hasMoreTags()) {
