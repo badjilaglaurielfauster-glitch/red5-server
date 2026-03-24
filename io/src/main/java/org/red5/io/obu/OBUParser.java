@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.red5.io.obu.context.QIndexContext;
 import org.red5.io.utils.HexDump;
 import org.red5.io.utils.LEB128;
 import org.red5.io.utils.LEB128.LEB128Result;
@@ -903,7 +904,11 @@ public class OBUParser {
      */
     private static boolean computeCodedLossless(OBPFrameHeader fh, OBPSequenceHeader seq) {
         for (int segmentId = 0; segmentId < 8; segmentId++) {
-            int qindex = getQIndex(true, segmentId, fh.quantizationParams.baseQIdx, fh, seq);
+
+            QIndexContext context = new QIndexContext(fh.quantizationParams.baseQIdx, fh, true, segmentId);
+
+            int qindex = getQIndex(context);
+
             if (qindex != 0 || fh.quantizationParams.deltaQYDc != 0 || fh.quantizationParams.deltaQUAc != 0 || fh.quantizationParams.deltaQUDc != 0 || fh.quantizationParams.deltaQVAc != 0 || fh.quantizationParams.deltaQVDc != 0) {
                 return false;
             }
@@ -914,19 +919,24 @@ public class OBUParser {
     /*
      * This method computes the quantization index for a given segment.
      */
-    private static int getQIndex(boolean ignoreDeltaQ, int segmentId, int currentQIndex, OBPFrameHeader fh, OBPSequenceHeader seq) {
-        if (fh.segmentationParams.segmentationEnabled && fh.segmentationParams.featureEnabled[segmentId][0]) {
-            int data = fh.segmentationParams.featureData[segmentId][0];
-            int qindex = fh.quantizationParams.baseQIdx + data;
-            if (!ignoreDeltaQ && fh.deltaQParams.deltaQPresent) {
-                qindex = currentQIndex + data;
+    private static int getQIndex(QIndexContext context) {
+        if (context.getFh().segmentationParams.segmentationEnabled && context.getFh().segmentationParams.featureEnabled[context.getSegmentId()][0]) {
+
+            int data = context.getFh().segmentationParams.featureData[context.getSegmentId()][0];
+            int qindex = context.getFh().quantizationParams.baseQIdx + data;
+
+            if (!context.isIgnoreDeltaQ() && context.getFh().deltaQParams.deltaQPresent) {
+                qindex = context.getCurrentQIndex() + data;
             }
+
             return Math.max(0, Math.min(255, qindex));
         }
-        if (!ignoreDeltaQ && fh.deltaQParams.deltaQPresent) {
-            return currentQIndex;
+
+        if (!context.isIgnoreDeltaQ() && context.getFh().deltaQParams.deltaQPresent) {
+            return context.getCurrentQIndex();
         }
-        return fh.quantizationParams.baseQIdx;
+
+        return context.getFh().quantizationParams.baseQIdx;
     }
 
     /*
