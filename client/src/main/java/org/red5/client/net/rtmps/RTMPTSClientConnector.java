@@ -7,23 +7,8 @@
 
 package org.red5.client.net.rtmps;
 
-import java.io.IOException;
-import java.util.List;
-
-import org.apache.http.HttpEntity;
 import org.apache.http.HttpHost;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.InputStreamEntity;
-import org.apache.http.util.EntityUtils;
-import org.apache.mina.core.buffer.IoBuffer;
-import org.red5.client.net.rtmp.OutboundHandshake;
-import org.red5.client.net.rtmp.RTMPClientConnManager;
-import org.red5.client.net.rtmpt.RTMPTClientConnection;
 import org.red5.client.net.rtmpt.RTMPTClientConnector;
-import org.red5.server.api.Red5;
-import org.red5.server.net.rtmp.RTMPConnection;
-import org.red5.server.net.rtmp.codec.RTMP;
 import org.red5.server.util.HttpConnectionUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

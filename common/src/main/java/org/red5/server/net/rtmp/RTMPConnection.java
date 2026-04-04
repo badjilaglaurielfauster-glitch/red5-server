@@ -76,6 +76,7 @@ import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.net.rtmp.message.Header;
 import org.red5.server.net.rtmp.message.Packet;
 import org.red5.server.net.rtmp.status.Status;
+import org.red5.server.net.rtmp.util.RTMPStreamManager;
 import org.red5.server.service.Call;
 import org.red5.server.service.PendingCall;
 import org.red5.server.so.FlexSharedObjectMessage;
@@ -210,18 +211,6 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
     protected transient ConcurrentMap<Integer, Channel> channels = new ConcurrentHashMap<>(channelsInitalCapacity, 0.9f, channelsConcurrencyLevel);
 
     /**
-     * Client streams
-     *
-     * @see org.red5.server.api.stream.IClientStream
-     */
-    protected transient ConcurrentMap<Number, IClientStream> streams = new ConcurrentHashMap<>(streamsInitalCapacity, 0.9f, streamsConcurrencyLevel);
-
-    /**
-     * Reserved stream ids. Stream id's directly relate to individual NetStream instances.
-     */
-    protected transient Set<Number> reservedStreams = Collections.newSetFromMap(new ConcurrentHashMap<Number, Boolean>(reservedStreamsInitalCapacity, 0.9f, reservedStreamsConcurrencyLevel));
-
-    /**
      * Received packet queue size
      */
     protected volatile int receivedQueueSize;
@@ -294,15 +283,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      */
     protected transient ConcurrentMap<Number, AtomicInteger> pendingVideos = new ConcurrentHashMap<>(1, 0.9f, 1);
 
-    /**
-     * Number of (NetStream) streams used.
-     */
-    private AtomicInteger usedStreams = new AtomicInteger(0);
-
-    /**
-     * Remembered stream buffer durations.
-     */
-    private transient ConcurrentMap<Number, Integer> streamBuffers = new ConcurrentHashMap<>(1, 0.9f, 1);
+    protected transient RTMPStreamManager streamManager = new RTMPStreamManager();
 
     /**
      * Maximum time in milliseconds to wait for a valid handshake.
@@ -796,7 +777,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Client streams as array
      */
     protected Collection<IClientStream> getStreams() {
-        return streams.values();
+        return streamManager.getStreamsMap().values();
     }
 
     /**
@@ -805,7 +786,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return a {@link java.util.Map} object
      */
     public Map<Number, IClientStream> getStreamsMap() {
-        return Collections.unmodifiableMap(streams);
+        return streamManager.getStreamsMap();
     }
 
     /**
@@ -814,27 +795,15 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return a {@link java.lang.Number} object
      */
     public Number reserveStreamId() {
-        double d = 1.0d;
-        for (; d < MAX_RESERVED_STREAMS; d++) {
-            if (reservedStreams.add(d)) {
-                break;
-            }
-        }
-        if (d == MAX_RESERVED_STREAMS) {
-            throw new IndexOutOfBoundsException("Unable to reserve new stream");
-        }
-        return d;
+        return streamManager.reserveStreamId();
     }
 
     /** {@inheritDoc} */
     public Number reserveStreamId(Number streamId) {
         if (isTrace) {
-            log.trace("Reserve stream id: {}", streamId);
+            log.trace("Reserve stream id: {} in connection: {}", streamId, sessionId);
         }
-        if (reservedStreams.add(streamId.doubleValue())) {
-            return streamId;
-        }
-        return reserveStreamId();
+        return streamManager.reserveStreamId(streamId);
     }
 
     /**
@@ -845,24 +814,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return true if its valid, false if its invalid
      */
     public boolean isValidStreamId(Number streamId) {
-        double d = streamId.doubleValue();
         if (isTrace) {
-            log.trace("Checking validation for streamId {}; reservedStreams: {}; streams: {}, connection: {}", new Object[] { d, reservedStreams, streams, sessionId });
+            log.trace("Checking validation for streamId: {} in connection: {}", streamId, sessionId);
         }
-        if (d <= 0 || !reservedStreams.contains(d)) {
-            log.warn("Stream id: {} was not reserved in connection {}", d, sessionId);
-            // stream id has not been reserved before
-            return false;
-        }
-        if (streams.get(d) != null) {
-            // another stream already exists with this id
-            log.warn("Another stream already exists with this id in streams {} in connection: {}", streams, sessionId);
-            return false;
-        }
-        if (isTrace) {
-            log.trace("Stream id: {} is valid for connection: {}", d, sessionId);
-        }
-        return true;
+
+        return streamManager.isValidStreamId(streamId);
     }
 
     /**
@@ -954,11 +910,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @param stream a {@link org.red5.server.api.stream.IClientStream} object
      */
     public void addClientStream(IClientStream stream) {
-        if (reservedStreams.add(stream.getStreamId().doubleValue())) {
+        if (streamManager.reserveId(stream.getStreamId())) {
             registerStream(stream);
         } else {
-            // stream not added to registered? what to do with it?
-            log.warn("Failed adding stream: {} to reserved: {}", stream, reservedStreams);
+            // Si on arrive ici, c'est que l'ID était déjà réservé
+            log.warn("Failed adding stream: {} to reserved in connection: {}", stream, sessionId);
         }
     }
 
@@ -977,12 +933,12 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Value for property 'usedStreamCount'.
      */
     protected int getUsedStreamCount() {
-        return usedStreams.get();
+        return streamManager.getCountUsedStream();
     }
 
     /** {@inheritDoc} */
     public IClientStream getStreamById(Number streamId) {
-        return streams.get(streamId.doubleValue());
+        return streamManager.getStreamById(streamId);
     }
 
     /**
@@ -1017,7 +973,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
         }
         Number streamId = getStreamIdForChannelId(channelId);
         if (isTrace) {
-            log.trace("Stream requested for channel id: {} stream id: {} streams: {}", channelId, streamId, streams);
+            log.trace("Stream requested for channel id: {} stream id: {} streams: {}", channelId, streamId, streamManager.getStreamsMap());
         }
         return getStreamById(streamId);
     }
@@ -1068,7 +1024,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      *            Stream
      */
     private void customizeStream(Number streamId, AbstractClientStream stream) {
-        Integer buffer = streamBuffers.get(streamId.doubleValue());
+        Integer buffer = streamManager.getBufferDuration(streamId);
         if (buffer != null) {
             stream.setClientBufferDuration(buffer);
         }
@@ -1084,12 +1040,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @param stream
      */
     private boolean registerStream(IClientStream stream) {
-        if (streams.putIfAbsent(stream.getStreamId().doubleValue(), stream) == null) {
-            usedStreams.incrementAndGet();
-            return true;
+        boolean registered = streamManager.registerStream(stream);
+        if (!registered) {
+            log.error("Unable to register stream {}, stream with id {} was already added", stream, stream.getStreamId());
         }
-        log.error("Unable to register stream {}, stream with id {} was already added", stream, stream.getStreamId());
-        return false;
+        return registered;
     }
 
     /**
@@ -1145,8 +1100,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
         IStreamService streamService = (IStreamService) ScopeUtils.getScopeService(scope, IStreamService.class, StreamService.class);
         if (streamService != null) {
             //in the end of call streamService.deleteStream we do streams.remove
-            for (Iterator<IClientStream> it = streams.values().iterator(); it.hasNext();) {
-                IClientStream stream = it.next();
+            for (IClientStream stream : streamManager.getStreamsMap().values()) {
                 if (isDebug) {
                     log.debug("Closing stream: {}", stream.getStreamId());
                 }
@@ -1160,12 +1114,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
         // close the base connection - disconnect scopes and unregister client
         super.close();
         // kill all the collections etc
+        streamManager.clear();
         channels.clear();
-        streams.clear();
         pendingCalls.clear();
         deferredResults.clear();
         pendingVideos.clear();
-        streamBuffers.clear();
         if (isTrace) {
             // dump memory stats
             log.trace("Memory at close - free: {}K total: {}K", Runtime.getRuntime().freeMemory() / 1024, Runtime.getRuntime().totalMemory() / 1024);
@@ -1230,11 +1183,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
         }
         double d = streamId.doubleValue();
         if (d > 0.0d) {
-            if (reservedStreams.remove(d)) {
+            if (streamManager.unreserveId(streamId)) {
                 deleteStreamById(d);
             } else {
                 if (isTrace) {
-                    log.trace("Failed to unreserve stream id: {} streams: {}", d, streams);
+                    log.trace("Failed to unreserve stream id: {} streams: {}", d, streamManager.getStreamsMap());
                 }
             }
         }
@@ -1243,19 +1196,13 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
     /** {@inheritDoc} */
     public void deleteStreamById(Number streamId) {
         if (isTrace) {
-            log.trace("Delete streamId: {}", streamId);
+            log.trace("Delete streamId: {} in connection: {}", streamId, sessionId);
         }
         double d = streamId.doubleValue();
         if (d > 0.0d) {
-            if (streams.remove(d) != null) {
-                usedStreams.decrementAndGet();
-                pendingVideos.remove(d);
-                streamBuffers.remove(d);
-            } else {
-                if (isTrace) {
-                    log.trace("Failed to remove stream id: {} streams: {}", d, streams);
-                }
-            }
+            // On demande au manager de supprimer le flux et le buffer
+            streamManager.deleteStream(streamId);
+            pendingVideos.remove(d);
         }
     }
 
@@ -1905,7 +1852,8 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @param bufferDuration a int
      */
     public void rememberStreamBufferDuration(int streamId, int bufferDuration) {
-        streamBuffers.put(streamId, bufferDuration);
+        streamManager.rememberBufferDuration(streamId, bufferDuration);
+
     }
 
     /**
