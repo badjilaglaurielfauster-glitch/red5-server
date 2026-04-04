@@ -84,12 +84,7 @@ abstract class PublisherTest {
         String userDir = System.getProperty("user.dir");
         log.info("User dir: {}", userDir);
         String sourceMediaFile = System.getProperty("source.media.file", "bbb_480p25.flv");
-        String[] paths = {
-                userDir + "/src/test/resources/fixtures/" + sourceMediaFile,
-                userDir + "/tests/src/test/resources/fixtures/" + sourceMediaFile,
-                userDir + "/io/src/test/resources/fixtures/" + sourceMediaFile,
-                userDir + "/red5-server/tests/src/test/resources/fixtures/" + sourceMediaFile
-        };
+        String[] paths = { userDir + "/src/test/resources/fixtures/" + sourceMediaFile, userDir + "/tests/src/test/resources/fixtures/" + sourceMediaFile, userDir + "/io/src/test/resources/fixtures/" + sourceMediaFile, userDir + "/red5-server/tests/src/test/resources/fixtures/" + sourceMediaFile };
         File finalFile = null;
         for (String p : paths) {
             File f = new File(p);
