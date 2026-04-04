@@ -76,6 +76,7 @@ import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.net.rtmp.message.Header;
 import org.red5.server.net.rtmp.message.Packet;
 import org.red5.server.net.rtmp.status.Status;
+import org.red5.server.net.rtmp.util.CallHandler;
 import org.red5.server.net.rtmp.util.RTMPStreamManager;
 import org.red5.server.service.Call;
 import org.red5.server.service.PendingCall;
@@ -216,21 +217,10 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
     protected volatile int receivedQueueSize;
 
     /**
-     * Transaction identifier for remote commands.
+     *Gere le pendingCall et le defaultsResults
+     * la logique liée aux appels de procédures distantes (RPC)
      */
-    protected AtomicInteger transactionId = new AtomicInteger(1);
-
-    /**
-     * Hash map that stores pending calls and ids as pairs.
-     */
-    protected transient ConcurrentMap<Integer, IPendingServiceCall> pendingCalls = new ConcurrentHashMap<>(pendingCallsInitalCapacity, 0.75f, pendingCallsConcurrencyLevel);
-
-    /**
-     * Deferred results set.
-     *
-     * @see org.red5.server.net.rtmp.DeferredResult
-     */
-    protected transient CopyOnWriteArraySet<DeferredResult> deferredResults = new CopyOnWriteArraySet<>();
+    protected transient CallHandler callHandler = new CallHandler();
 
     /**
      * Last ping round trip time
@@ -1116,8 +1106,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
         // kill all the collections etc
         streamManager.clear();
         channels.clear();
-        pendingCalls.clear();
-        deferredResults.clear();
+        callHandler.clear();
         pendingVideos.clear();
         if (isTrace) {
             // dump memory stats
@@ -1163,17 +1152,11 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * processing. The caller only knows that it cannot be confirmed that the callee has invoked the service call and returned a result.
      */
     public void sendPendingServiceCallsCloseError() {
-        if (pendingCalls != null && !pendingCalls.isEmpty()) {
-            if (isDebug) {
-                log.debug("Connection calls pending: {}", pendingCalls.size());
-            }
-            for (IPendingServiceCall call : pendingCalls.values()) {
-                call.setStatus(Call.STATUS_NOT_CONNECTED);
-                for (IPendingServiceCallback callback : call.getCallbacks()) {
-                    callback.resultReceived(call);
-                }
-            }
+        if (isDebug && callHandler.hasPendingCalls()) {
+            log.debug("Connection calls pending: {}", sessionId);
         }
+
+        callHandler.sendCloseError();
     }
 
     /** {@inheritDoc} */
@@ -1280,7 +1263,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Next invoke id for RPC
      */
     public int getTransactionId() {
-        return transactionId.incrementAndGet();
+        return callHandler.getNextTransactionId();
     }
 
     /**
@@ -1292,7 +1275,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      *            Call service
      */
     public void registerPendingCall(int invokeId, IPendingServiceCall call) {
-        pendingCalls.put(invokeId, call);
+        callHandler.registerPendingCall(invokeId, call);
     }
 
     /**
@@ -1434,7 +1417,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Pending call service object
      */
     public IPendingServiceCall getPendingCall(int invokeId) {
-        return pendingCalls.get(invokeId);
+        return callHandler.getPendingCall(invokeId);
     }
 
     /**
@@ -1445,7 +1428,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return Pending call service object
      */
     public IPendingServiceCall retrievePendingCall(int invokeId) {
-        return pendingCalls.remove(invokeId);
+        return callHandler.retrievePendingCall(invokeId);
     }
 
     /**
@@ -1832,7 +1815,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      *            Result to register
      */
     public void registerDeferredResult(DeferredResult result) {
-        deferredResults.add(result);
+        callHandler.registerDeferredResult(result);
     }
 
     /**
@@ -1842,7 +1825,7 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      *            Result to unregister
      */
     public void unregisterDeferredResult(DeferredResult result) {
-        deferredResults.remove(result);
+        callHandler.unregisterDeferredResult(result);
     }
 
     /**
