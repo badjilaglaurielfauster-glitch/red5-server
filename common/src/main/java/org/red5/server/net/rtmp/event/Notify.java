@@ -185,6 +185,11 @@ public class Notify extends BaseStreamData implements ICommand {
         this.action = onCueOrOnMeta;
     }
 
+    @Override
+    public Notify duplicate() throws IOException, ClassNotFoundException {
+        return (Notify) super.duplicate();
+    }
+
     /**
      * <p>Getter for the field <code>action</code>.</p>
      *

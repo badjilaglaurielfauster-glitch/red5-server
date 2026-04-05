@@ -7,6 +7,8 @@
 
 package org.red5.server.net.rtmp.event;
 
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -25,6 +27,11 @@ public class Abort extends BaseEvent {
      */
     public Abort() {
         super(Type.SYSTEM);
+    }
+
+    @Override
+    public <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException {
+        return null;
     }
 
     /**
