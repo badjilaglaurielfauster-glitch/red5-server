@@ -320,6 +320,13 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
     protected volatile LinkedTransferQueue<Packet> receivedPacketQueue = new LinkedTransferQueue<>();
 
     /**
+     * Offset pour les canaux réservés au système RTMP.
+     * Les canaux inférieurs à cet index sont dédiés au contrôle (Ping, Set Peer Bandwidth, etc.).
+     */
+    private static final int RTMP_CHANNELS_RESERVED_OFFSET = 4;
+    private static final double CHANNELS_PER_STREAM = 5.0;
+
+    /**
      * Creates anonymous RTMP connection without scope.
      *
      * @param type
@@ -870,10 +877,10 @@ public abstract class RTMPConnection extends BaseConnection implements IStreamCa
      * @return ID of stream that channel belongs to
      */
     public Number getStreamIdForChannelId(int channelId) {
-        if (channelId < 4) {
+        if (channelId < RTMP_CHANNELS_RESERVED_OFFSET) {
             return 0;
         }
-        Number streamId = Math.floor(((channelId - 4) / 5.0d) + 1);
+        Number streamId = Math.floor(((channelId - RTMP_CHANNELS_RESERVED_OFFSET) / CHANNELS_PER_STREAM) + 1);
         if (isTrace) {
             log.trace("Stream id: {} requested for channel id: {}", streamId, channelId);
         }
