@@ -310,8 +310,8 @@ public class RTMPMinaConnection extends RTMPConnection implements RTMPMinaConnec
                 }
             }
             // if exceeds max inactivity kill and clean up
-            if (ioTime >= maxInactivity) {
-                log.warn("Connection {} has exceeded the max inactivity threshold of {} ms", getSessionId(), maxInactivity);
+            if (ioTime >= watchMonitor.getMaxInactivity()) {
+                log.warn("Connection {} has exceeded the max inactivity threshold of {} ms", getSessionId(), watchMonitor.getMaxInactivity());
                 log.debug("Prepared to clear write queue, if session is connected: {}; closing? {}", ioSession.isConnected(), ioSession.isClosing());
                 if (ioSession.isConnected()) {
                     // clear the write queue

@@ -9,7 +9,7 @@ import org.red5.server.api.service.IPendingServiceCallback;
 import org.red5.server.net.rtmp.DeferredResult;
 import org.red5.server.service.Call;
 
-public class CallHandler {
+public class RTMPCallHandler {
 
     /**
      * Initial pending calls capacity
@@ -89,4 +89,5 @@ public class CallHandler {
     public boolean hasPendingCalls() {
         return pendingCalls != null && !pendingCalls.isEmpty();
     }
+
 }
