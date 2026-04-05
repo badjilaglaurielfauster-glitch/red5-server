@@ -900,6 +900,47 @@ public class FLVReader implements IoConstants, ITagReader, IKeyFrameDataAnalyzer
         setCurrentPosition(pos);
     }
 
+
+    private byte[] fetchTagHeaderBytes() {
+        fillBuffer(15);
+        byte[] headerBytes = new byte[15];
+        in.get(headerBytes);
+        return headerBytes;
+    }
+
+    private void validateDataType(byte dataType) throws UnsupportedDataTypeException {
+        switch (dataType) {
+            case 8:
+                log.debug("Found audio");
+            case 9:
+                log.debug("Found video");
+            case 15:
+            case 18:
+                log.debug("Found meta/script data");
+                return;
+            default:
+                throw new UnsupportedDataTypeException("Invalid data type detected (" + dataType + ")");
+        }
+    }
+
+    private ITag parseTagHeader(byte[] rawData) throws UnsupportedDataTypeException {
+        IoBuffer temp = IoBuffer.wrap(rawData);
+
+        int previousTagSize = temp.getInt();
+        byte dataType = (byte) (temp.get() & 31);
+
+
+        validateDataType(dataType);
+
+        int bodySize = IOUtils.readUnsignedMediumInt(temp);
+        int timestamp = IOUtils.readExtendedMediumInt(temp);
+        int streamId = IOUtils.readUnsignedMediumInt(temp);
+
+        return new Tag(dataType, timestamp, bodySize, null, previousTagSize);
+    }
+
+
+
     /**
      * Read only header part of a tag.
      *
@@ -907,41 +948,8 @@ public class FLVReader implements IoConstants, ITagReader, IKeyFrameDataAnalyzer
      * @throws UnsupportedDataTypeException
      */
     private ITag readTagHeader() throws UnsupportedDataTypeException {
-        // previous tag size (4 bytes) + flv tag header size (11 bytes)
-        fillBuffer(15);
-        // previous tag's size
-        int previousTagSize = in.getInt();
-        // start of the flv tag
-        byte dataType = in.get();
-        if (log.isTraceEnabled()) {
-            log.trace("Bits: {}", Integer.toBinaryString(dataType));
-        }
-        dataType = (byte) (dataType & 31);
-        byte filter = (byte) ((dataType & 63) >> 5);
-        byte reserved = (byte) ((dataType & 127) >> 6);
-        log.debug("Reserved: {}, Filter: {}, Datatype: {}", reserved, filter, dataType);
-        switch (dataType) {
-            case 8: // audio
-                log.debug("Found audio");
-                break;
-            case 9: // video
-                log.debug("Found video");
-                break;
-            case 15: // special fms undocumented type?
-            case 18: // meta / script data
-                log.debug("Found meta/script data");
-                break;
-            default:
-                log.debug("Invalid data type detected ({}), reading ahead\n current position: {} limit: {}", dataType, in.position(), in.limit());
-                throw new UnsupportedDataTypeException("Invalid data type detected (" + dataType + ")");
-        }
-        int bodySize = IOUtils.readUnsignedMediumInt(in);
-        int timestamp = IOUtils.readExtendedMediumInt(in);
-        int streamId = IOUtils.readUnsignedMediumInt(in);
-        if (log.isDebugEnabled()) {
-            log.debug("Data type: {} timestamp: {} stream id: {} body size: {} previous tag size: {}", new Object[] { dataType, timestamp, streamId, bodySize, previousTagSize });
-        }
-        return new Tag(dataType, timestamp, bodySize, null, previousTagSize);
+        byte[] rawHeader = fetchTagHeaderBytes();
+        return parseTagHeader(rawHeader);
     }
 
     /**
