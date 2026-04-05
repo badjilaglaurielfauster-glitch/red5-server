@@ -28,7 +28,6 @@ public class RTMPBandManager {
      */
     protected transient ConcurrentMap<Number, AtomicInteger> pendingVideos = new ConcurrentHashMap<>(1, 0.9f, 1);
 
-
     public void recordClientBytesRead(int bytes) {
         clientBytesRead.addAndGet(bytes);
     }

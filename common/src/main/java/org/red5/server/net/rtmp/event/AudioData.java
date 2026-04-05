@@ -19,7 +19,9 @@ import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.codec.AudioCodec;
 import org.red5.codec.AudioPacketType;
 import org.red5.io.IoConstants;
+import org.red5.server.api.event.IEvent;
 import org.red5.server.api.stream.IStreamPacket;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.red5.server.stream.IStreamData;
 
 /**
@@ -27,11 +29,9 @@ import org.red5.server.stream.IStreamData;
  *
  * @author mondain
  */
-public class AudioData extends BaseEvent implements IStreamData<AudioData>, IStreamPacket {
+public class AudioData extends BaseStreamData implements IoConstants {
 
     private static final long serialVersionUID = -4102940670913999407L;
-
-    protected IoBuffer data;
 
     /**
      * Data type
@@ -76,8 +76,7 @@ public class AudioData extends BaseEvent implements IStreamData<AudioData>, IStr
      * @param data a {@link org.apache.mina.core.buffer.IoBuffer} object
      */
     public AudioData(IoBuffer data) {
-        super(Type.STREAM_DATA);
-        setData(data);
+        super(Type.STREAM_DATA, data);
     }
 
     /**
@@ -215,76 +214,9 @@ public class AudioData extends BaseEvent implements IStreamData<AudioData>, IStr
     /** {@inheritDoc} */
     @Override
     protected void releaseInternal() {
-        if (data != null) {
-            data.free();
-            data = null;
-        }
-        //codec = null;
+        super.releaseInternal();
         codecId = -1;
         config = false;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        byte[] byteBuf = (byte[]) in.readObject();
-        if (byteBuf != null) {
-            setData(byteBuf);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        if (data != null) {
-            if (data.hasArray()) {
-                out.writeObject(data.array());
-            } else {
-                byte[] array = new byte[data.remaining()];
-                data.mark();
-                data.get(array);
-                data.reset();
-                out.writeObject(array);
-            }
-        } else {
-            out.writeObject(null);
-        }
-    }
-
-    /**
-     * Duplicate this message / event.
-     *
-     * @return duplicated event
-     * @throws java.io.IOException if any.
-     * @throws java.lang.ClassNotFoundException if any.
-     */
-    public AudioData duplicate() throws IOException, ClassNotFoundException {
-        AudioData result = new AudioData();
-        // serialize
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        writeExternal(oos);
-        oos.close();
-        // convert to byte array
-        byte[] buf = baos.toByteArray();
-        baos.close();
-        // create input streams
-        ByteArrayInputStream bais = new ByteArrayInputStream(buf);
-        ObjectInputStream ois = new ObjectInputStream(bais);
-        // deserialize
-        result.readExternal(ois);
-        ois.close();
-        bais.close();
-        // clone the header if there is one
-        if (header != null) {
-            result.setHeader(header.clone());
-        }
-        result.setSourceType(sourceType);
-        result.setSource(source);
-        result.setTimestamp(timestamp);
-        return result;
     }
 
     /** {@inheritDoc} */

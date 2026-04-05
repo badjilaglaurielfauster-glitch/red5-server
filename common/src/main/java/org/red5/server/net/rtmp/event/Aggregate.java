@@ -20,6 +20,7 @@ import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.IoConstants;
 import org.red5.io.utils.IOUtils;
 import org.red5.server.api.stream.IStreamPacket;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.red5.server.net.rtmp.message.Header;
 import org.red5.server.stream.IStreamData;
 import org.slf4j.Logger;
@@ -30,16 +31,11 @@ import org.slf4j.LoggerFactory;
  *
  * @author mondain
  */
-public class Aggregate extends BaseEvent implements IoConstants, IStreamData<Aggregate>, IStreamPacket {
+public class Aggregate extends BaseStreamData implements IoConstants {
 
     private static final long serialVersionUID = 5538859593815804830L;
 
     private static Logger log = LoggerFactory.getLogger(Aggregate.class);
-
-    /**
-     * Data
-     */
-    protected IoBuffer data;
 
     /**
      * Data type
@@ -50,7 +46,7 @@ public class Aggregate extends BaseEvent implements IoConstants, IStreamData<Agg
      * Constructs a new Aggregate.
      */
     public Aggregate() {
-        this(IoBuffer.allocate(0).flip());
+        super(Type.STREAM_DATA, IoBuffer.allocate(0).flip());
     }
 
     /**
@@ -60,8 +56,7 @@ public class Aggregate extends BaseEvent implements IoConstants, IStreamData<Agg
      *            data
      */
     public Aggregate(IoBuffer data) {
-        super(Type.STREAM_DATA);
-        setData(data);
+        super(Type.STREAM_DATA, data);
     }
 
     /**
@@ -128,95 +123,75 @@ public class Aggregate extends BaseEvent implements IoConstants, IStreamData<Agg
         this.data.put(data).flip();
     }
 
+    private Header createPartHeader(byte subType, int size, int timestamp) {
+        Header partHeader = new Header();
+        partHeader.setChannelId(header.getChannelId());
+        partHeader.setDataType(subType);
+        partHeader.setSize(size);
+        partHeader.setStreamId(header.getStreamId());
+        partHeader.setTimer(timestamp);
+        return partHeader;
+    }
+
+    private void consumeBackPointer() {
+        if (data.remaining() >= 4) {
+            int backPointer = data.getInt();
+            log.trace("Back pointer consumed: {}", backPointer);
+        }
+    }
+
+    private IRTMPEvent extractPart(byte subType) {
+        int size = IOUtils.readUnsignedMediumInt(data);
+        int timestamp = IOUtils.readExtendedMediumInt(data);
+        int streamId = IOUtils.readUnsignedMediumInt(data);
+
+        Header partHeader = createPartHeader(subType, size, timestamp);
+
+        IRTMPEvent event;
+        switch (subType) {
+            case TYPE_AUDIO_DATA:
+                event = new AudioData(data.getSlice(size));
+                break;
+            case TYPE_VIDEO_DATA:
+                event = new VideoData(data.getSlice(size));
+                break;
+            default:
+                log.debug("Non-A/V subtype: {}", subType);
+                event = new Unknown(subType, data.getSlice(size));
+        }
+
+        event.setTimestamp(timestamp);
+        event.setHeader(partHeader);
+        return event;
+    }
+
     /**
      * Breaks-up the aggregate into its individual parts and returns them as a list. The parts are returned based on the ordering of the aggregate itself.
      *
      * @return list of IRTMPEvent objects
      */
     public LinkedList<IRTMPEvent> getParts() {
-        LinkedList<IRTMPEvent> parts = new LinkedList<IRTMPEvent>();
+        LinkedList<IRTMPEvent> parts = new LinkedList<>();
         log.trace("Aggregate data length: {}", data.limit());
-        int position = data.position();
-        do {
+
+        while (data.position() < data.limit()) {
             try {
-                // read the header
-                //log.trace("Hex: {}", data.getHexDump());
                 byte subType = data.get();
-                // when we run into subtype 0 break out of here
                 if (subType == 0) {
-                    log.debug("Subtype 0 encountered within this aggregate, processing with exit");
+                    log.debug("Subtype 0 encountered, exiting aggregate processing");
                     break;
                 }
-                int size = IOUtils.readUnsignedMediumInt(data);
-                log.debug("Data subtype: {} size: {}", subType, size);
-                // TODO ensure the data contains all the bytes to support the specified size
-                int timestamp = IOUtils.readExtendedMediumInt(data);
-                /* timestamp = ntohap((GETIBPOINTER(buffer) + 4)); 0x12345678 == 34 56 78 12 */
-                int streamId = IOUtils.readUnsignedMediumInt(data);
-                log.debug("Data timestamp: {} stream id: {}", timestamp, streamId);
-                Header partHeader = new Header();
-                partHeader.setChannelId(header.getChannelId());
-                partHeader.setDataType(subType);
-                partHeader.setSize(size);
-                // use the stream id from the aggregate's header
-                partHeader.setStreamId(header.getStreamId());
-                partHeader.setTimer(timestamp);
-                // timer delta == time stamp - timer base
-                // the back pointer may be used to verify the size of the individual part
-                // it will be equal to the data size + header size
-                int backPointer = 0;
-                switch (subType) {
-                    case TYPE_AUDIO_DATA:
-                        AudioData audio = new AudioData(data.getSlice(size));
-                        audio.setTimestamp(timestamp);
-                        audio.setHeader(partHeader);
-                        log.debug("Audio header: {}", audio.getHeader());
-                        parts.add(audio);
-                        //log.trace("Hex: {}", data.getHexDump());
-                        // ensure 4 bytes left to read an int
-                        if (data.position() < data.limit() - 4) {
-                            backPointer = data.getInt();
-                            //log.trace("Back pointer: {}", backPointer);
-                            if (backPointer != (size + 11)) {
-                                log.debug("Data size ({}) and back pointer ({}) did not match", size, backPointer);
-                            }
-                        }
-                        break;
-                    case TYPE_VIDEO_DATA:
-                        VideoData video = new VideoData(data.getSlice(size));
-                        video.setTimestamp(timestamp);
-                        video.setHeader(partHeader);
-                        log.debug("Video header: {}", video.getHeader());
-                        parts.add(video);
-                        //log.trace("Hex: {}", data.getHexDump());
-                        // ensure 4 bytes left to read an int
-                        if (data.position() < data.limit() - 4) {
-                            backPointer = data.getInt();
-                            //log.trace("Back pointer: {}", backPointer);
-                            if (backPointer != (size + 11)) {
-                                log.debug("Data size ({}) and back pointer ({}) did not match", size, backPointer);
-                            }
-                        }
-                        break;
-                    default:
-                        log.debug("Non-A/V subtype: {}", subType);
-                        Unknown unk = new Unknown(subType, data.getSlice(size));
-                        unk.setTimestamp(timestamp);
-                        unk.setHeader(partHeader);
-                        parts.add(unk);
-                        // ensure 4 bytes left to read an int
-                        if (data.position() < data.limit() - 4) {
-                            backPointer = data.getInt();
-                        }
+
+                IRTMPEvent part = extractPart(subType);
+                if (part != null) {
+                    parts.add(part);
                 }
-                position = data.position();
+                consumeBackPointer();
             } catch (Exception e) {
                 log.error("Exception decoding aggregate parts", e);
                 break;
             }
-            log.trace("Data position: {}", position);
-        } while (position < data.limit());
-        log.trace("Aggregate processing complete, {} parts extracted", parts.size());
+        }
         return parts;
     }
 
@@ -224,76 +199,6 @@ public class Aggregate extends BaseEvent implements IoConstants, IStreamData<Agg
     @Override
     public String toString() {
         return String.format("Aggregate - ts: %s length: %s", getTimestamp(), (data != null ? data.limit() : '0'));
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    protected void releaseInternal() {
-        if (data != null) {
-            final IoBuffer localData = data;
-            // null out the data first so we don't accidentally
-            // return a valid reference first
-            data = null;
-            localData.clear();
-            localData.free();
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        byte[] byteBuf = (byte[]) in.readObject();
-        if (byteBuf != null) {
-            data = IoBuffer.allocate(byteBuf.length);
-            data.setAutoExpand(true);
-            SerializeUtils.ByteArrayToByteBuffer(byteBuf, data);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        if (data != null) {
-            out.writeObject(SerializeUtils.ByteBufferToByteArray(data));
-        } else {
-            out.writeObject(null);
-        }
-    }
-
-    /**
-     * Duplicate this message / event.
-     *
-     * @return duplicated event
-     * @throws java.io.IOException if any.
-     * @throws java.lang.ClassNotFoundException if any.
-     */
-    public Aggregate duplicate() throws IOException, ClassNotFoundException {
-        Aggregate result = new Aggregate();
-        // serialize
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        writeExternal(oos);
-        oos.close();
-        // convert to byte array
-        byte[] buf = baos.toByteArray();
-        baos.close();
-        // create input streams
-        ByteArrayInputStream bais = new ByteArrayInputStream(buf);
-        ObjectInputStream ois = new ObjectInputStream(bais);
-        // deserialize
-        result.readExternal(ois);
-        ois.close();
-        bais.close();
-        // clone the header if there is one
-        if (header != null) {
-            result.setHeader(header.clone());
-        }
-        result.setSourceType(sourceType);
-        result.setSource(source);
-        result.setTimestamp(timestamp);
-        return result;
     }
 
 }

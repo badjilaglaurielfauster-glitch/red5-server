@@ -7,6 +7,8 @@
 
 package org.red5.server.net.rtmp.event;
 
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -41,6 +43,11 @@ public class ClientBW extends BaseEvent {
      */
     public ClientBW() {
         super(Type.STREAM_CONTROL);
+    }
+
+    @Override
+    public <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException {
+        return null;
     }
 
     /**

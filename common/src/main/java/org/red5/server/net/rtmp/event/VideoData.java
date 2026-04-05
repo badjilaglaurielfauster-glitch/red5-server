@@ -21,6 +21,7 @@ import org.red5.codec.VideoFrameType;
 import org.red5.codec.VideoPacketType;
 import org.red5.io.IoConstants;
 import org.red5.server.api.stream.IStreamPacket;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.red5.server.stream.IStreamData;
 import org.red5.util.ByteNibbler;
 
@@ -29,14 +30,9 @@ import org.red5.util.ByteNibbler;
  *
  * @author mondain
  */
-public class VideoData extends BaseEvent implements IoConstants, IStreamData<VideoData>, IStreamPacket {
+public class VideoData extends BaseStreamData implements IoConstants {
 
     private static final long serialVersionUID = 5538859593815804830L;
-
-    /**
-     * Video data
-     */
-    protected IoBuffer data;
 
     /**
      * Data type
@@ -87,8 +83,7 @@ public class VideoData extends BaseEvent implements IoConstants, IStreamData<Vid
      *            Video data
      */
     public VideoData(IoBuffer data) {
-        super(Type.STREAM_DATA);
-        setData(data);
+        super(Type.STREAM_DATA, data);
     }
 
     /**
@@ -259,82 +254,9 @@ public class VideoData extends BaseEvent implements IoConstants, IStreamData<Vid
     /** {@inheritDoc} */
     @Override
     protected void releaseInternal() {
-        if (data != null) {
-            final IoBuffer localData = data;
-            // null out the data first so we don't accidentally
-            // return a valid reference first
-            data = null;
-            localData.clear();
-            localData.free();
-        }
-        //codec = null;
+        super.releaseInternal();
         codecId = -1;
         config = false;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        frameType = (VideoFrameType) in.readObject();
-        byte[] byteBuf = (byte[]) in.readObject();
-        if (byteBuf != null) {
-            setData(byteBuf);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeObject(frameType);
-        if (data != null) {
-            if (data.hasArray()) {
-                out.writeObject(data.array());
-            } else {
-                byte[] array = new byte[data.remaining()];
-                data.mark();
-                data.get(array);
-                data.reset();
-                out.writeObject(array);
-            }
-        } else {
-            out.writeObject(null);
-        }
-    }
-
-    /**
-     * Duplicate this message / event.
-     *
-     * @return duplicated event
-     * @throws java.io.IOException if any.
-     * @throws java.lang.ClassNotFoundException if any.
-     */
-    public VideoData duplicate() throws IOException, ClassNotFoundException {
-        VideoData result = new VideoData();
-        // serialize
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        writeExternal(oos);
-        oos.close();
-        // convert to byte array
-        byte[] buf = baos.toByteArray();
-        baos.close();
-        // create input streams
-        ByteArrayInputStream bais = new ByteArrayInputStream(buf);
-        ObjectInputStream ois = new ObjectInputStream(bais);
-        // deserialize
-        result.readExternal(ois);
-        ois.close();
-        bais.close();
-        // clone the header if there is one
-        if (header != null) {
-            result.setHeader(header.clone());
-        }
-        result.setSourceType(sourceType);
-        result.setSource(source);
-        result.setTimestamp(timestamp);
-        return result;
     }
 
     /** {@inheritDoc} */

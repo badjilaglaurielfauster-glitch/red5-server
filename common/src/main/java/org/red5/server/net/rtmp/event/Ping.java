@@ -7,6 +7,8 @@
 
 package org.red5.server.net.rtmp.event;
 
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -16,7 +18,7 @@ import java.io.ObjectOutput;
  *
  * @author mondain
  */
-public class Ping extends BaseEvent {
+public class Ping extends BaseStreamData {
 
     private static final long serialVersionUID = -6478248060425544923L;
 
@@ -419,12 +421,6 @@ public class Ping extends BaseEvent {
     @Override
     public String toString() {
         return String.format("Ping: %s, %f, %d, %d", PingType.getType(eventType), value2.doubleValue(), value3, value4);
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    protected void releaseInternal() {
-
     }
 
     /** {@inheritDoc} */

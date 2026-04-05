@@ -13,19 +13,15 @@ import java.io.ObjectOutput;
 
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.io.utils.HexDump;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 
 /**
  * Unknown event
  *
  * @author mondain
  */
-public class Unknown extends BaseEvent {
+public class Unknown extends BaseStreamData {
     private static final long serialVersionUID = -1352770037962252975L;
-
-    /**
-     * Event data
-     */
-    protected IoBuffer data;
 
     /**
      * Type of data
@@ -79,37 +75,4 @@ public class Unknown extends BaseEvent {
         return sb.toString();
     }
 
-    /** {@inheritDoc} */
-    @Override
-    protected void releaseInternal() {
-        if (data != null) {
-            data.free();
-            data = null;
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        dataType = in.readByte();
-        byte[] byteBuf = (byte[]) in.readObject();
-        if (byteBuf != null) {
-            data = IoBuffer.allocate(0);
-            data.setAutoExpand(true);
-            SerializeUtils.ByteArrayToByteBuffer(byteBuf, data);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        out.writeByte(dataType);
-        if (data != null) {
-            out.writeObject(SerializeUtils.ByteBufferToByteArray(data));
-        } else {
-            out.writeObject(null);
-        }
-    }
 }

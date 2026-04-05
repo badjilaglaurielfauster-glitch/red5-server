@@ -15,11 +15,13 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.mina.core.buffer.IoBuffer;
 import org.red5.server.api.service.IServiceCall;
 import org.red5.server.api.stream.IStreamPacket;
 import org.red5.server.net.ICommand;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.red5.server.stream.IStreamData;
 
 /**
@@ -27,7 +29,7 @@ import org.red5.server.stream.IStreamData;
  *
  * @author mondain
  */
-public class Notify extends BaseEvent implements ICommand, IStreamData<Notify>, IStreamPacket {
+public class Notify extends BaseStreamData implements ICommand {
 
     private static final long serialVersionUID = -6085848257275156569L;
 
@@ -35,11 +37,6 @@ public class Notify extends BaseEvent implements ICommand, IStreamData<Notify>, 
      * Service call
      */
     protected IServiceCall call;
-
-    /**
-     * Event data
-     */
-    protected IoBuffer data;
 
     /**
      * Event data type
@@ -83,8 +80,7 @@ public class Notify extends BaseEvent implements ICommand, IStreamData<Notify>, 
      *            Byte buffer
      */
     public Notify(IoBuffer data) {
-        super(Type.STREAM_DATA);
-        this.data = data;
+        super(Type.STREAM_DATA, data);
     }
 
     /**
@@ -94,8 +90,7 @@ public class Notify extends BaseEvent implements ICommand, IStreamData<Notify>, 
      * @param action Action / method
      */
     public Notify(IoBuffer data, String action) {
-        super(Type.STREAM_DATA);
-        this.data = data;
+        super(Type.STREAM_DATA, data);
         this.action = action;
     }
 
@@ -208,114 +203,12 @@ public class Notify extends BaseEvent implements ICommand, IStreamData<Notify>, 
     /** {@inheritDoc} */
     @Override
     public boolean equals(Object obj) {
-        if (obj == null) {
+        if (this == obj)
+            return true;
+        if (!(obj instanceof Notify other))
             return false;
-        }
-        if (!(obj instanceof Notify)) {
-            return false;
-        }
-        Notify other = (Notify) obj;
-        if (getType() != other.getType()) {
-            return false;
-        }
-        if (getTimestamp() != other.getTimestamp()) {
-            return false;
-        }
-        if (getTransactionId() != other.getTransactionId()) {
-            return false;
-        }
-        if (getConnectionParams() == null && other.getConnectionParams() != null) {
-            return false;
-        }
-        if (getConnectionParams() != null && other.getConnectionParams() == null) {
-            return false;
-        }
-        if (getConnectionParams() != null && !getConnectionParams().equals(other.getConnectionParams())) {
-            return false;
-        }
-        if (getCall() == null && other.getCall() != null) {
-            return false;
-        }
-        if (getCall() != null && other.getCall() == null) {
-            return false;
-        }
-        if (getCall() != null && !getCall().equals(other.getCall())) {
-            return false;
-        }
-        return true;
-    }
 
-    /** {@inheritDoc} */
-    @Override
-    protected void releaseInternal() {
-        if (data != null) {
-            data.free();
-            data = null;
-        }
-    }
-
-    /** {@inheritDoc} */
-    @SuppressWarnings("unchecked")
-    @Override
-    public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-        super.readExternal(in);
-        call = (IServiceCall) in.readObject();
-        connectionParams = (Map<String, Object>) in.readObject();
-        transactionId = in.readInt();
-        byte[] byteBuf = (byte[]) in.readObject();
-        if (byteBuf != null) {
-            data = IoBuffer.allocate(0);
-            data.setAutoExpand(true);
-            SerializeUtils.ByteArrayToByteBuffer(byteBuf, data);
-        }
-        if (log.isTraceEnabled()) {
-            log.trace("readExternal - transactionId: {} connectionParams: {} call: {}", transactionId, connectionParams, call);
-        }
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    public void writeExternal(ObjectOutput out) throws IOException {
-        super.writeExternal(out);
-        if (log.isTraceEnabled()) {
-            log.trace("writeExternal - transactionId: {} connectionParams: {} call: {}", transactionId, connectionParams, call);
-        }
-        out.writeObject(call);
-        out.writeObject(connectionParams);
-        out.writeInt(transactionId);
-        if (data != null) {
-            out.writeObject(SerializeUtils.ByteBufferToByteArray(data));
-        } else {
-            out.writeObject(null);
-        }
-    }
-
-    /**
-     * Duplicate this Notify message to future injection Serialize to memory and deserialize, safe way.
-     *
-     * @return duplicated Notify event
-     * @throws java.io.IOException if any.
-     * @throws java.lang.ClassNotFoundException if any.
-     */
-    public Notify duplicate() throws IOException, ClassNotFoundException {
-        Notify result = new Notify();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        writeExternal(oos);
-        oos.close();
-        byte[] buf = baos.toByteArray();
-        baos.close();
-        ByteArrayInputStream bais = new ByteArrayInputStream(buf);
-        ObjectInputStream ois = new ObjectInputStream(bais);
-        result.readExternal(ois);
-        ois.close();
-        bais.close();
-        // set the action if it exists
-        result.setAction(getAction());
-        result.setSourceType(sourceType);
-        result.setSource(source);
-        result.setTimestamp(timestamp);
-        return result;
+        return getTimestamp() == other.getTimestamp() && transactionId == other.transactionId && getType() == other.getType() && Objects.equals(action, other.action) && Objects.equals(connectionParams, other.connectionParams) && Objects.equals(call, other.call);
     }
 
 }

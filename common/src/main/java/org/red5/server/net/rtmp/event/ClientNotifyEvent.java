@@ -1,5 +1,8 @@
 package org.red5.server.net.rtmp.event;
 
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
+
+import java.io.IOException;
 import java.util.Arrays;
 
 /**
@@ -35,6 +38,11 @@ public class ClientNotifyEvent extends BaseEvent {
     public final static ClientNotifyEvent build(String method, Object[] params) {
         ClientNotifyEvent event = new ClientNotifyEvent(method, params);
         return event;
+    }
+
+    @Override
+    public <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException {
+        return null;
     }
 
     /** {@inheritDoc} */

@@ -17,6 +17,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.red5.server.api.event.IEventListener;
 import org.red5.server.net.rtmp.event.BaseEvent;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,6 +103,11 @@ public class SharedObjectMessage extends BaseEvent implements ISharedObjectMessa
     @Override
     public byte getDataType() {
         return TYPE_SHARED_OBJECT;
+    }
+
+    @Override
+    protected void releaseInternal() {
+
     }
 
     /**
@@ -235,9 +241,9 @@ public class SharedObjectMessage extends BaseEvent implements ISharedObjectMessa
         return getEvents();
     }
 
-    /** {@inheritDoc} */
     @Override
-    protected void releaseInternal() {
+    public <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException {
+        return null;
     }
 
     /** {@inheritDoc} */

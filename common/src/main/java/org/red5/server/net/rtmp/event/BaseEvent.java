@@ -14,6 +14,7 @@ import java.io.ObjectOutput;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.red5.server.api.event.IEventListener;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 import org.red5.server.net.rtmp.message.Constants;
 import org.red5.server.net.rtmp.message.Header;
 import org.slf4j.Logger;
@@ -181,6 +182,8 @@ public abstract class BaseEvent implements Constants, IRTMPEvent, Externalizable
     public void setSource(IEventListener source) {
         this.source = source;
     }
+
+    public abstract <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException;
 
     /**
      * {@inheritDoc}

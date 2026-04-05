@@ -1,8 +1,10 @@
 package org.red5.server.net.rtmp.event;
 
+import java.io.IOException;
 import java.util.Arrays;
 
 import org.red5.server.api.service.IPendingServiceCallback;
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
 
 /**
  * Represents an invoke to be executed on a connected client.
@@ -42,6 +44,11 @@ public class ClientInvokeEvent extends BaseEvent {
     public final static ClientInvokeEvent build(String method, Object[] params, IPendingServiceCallback callback) {
         ClientInvokeEvent event = new ClientInvokeEvent(method, params, callback);
         return event;
+    }
+
+    @Override
+    public <T extends BaseStreamData> T duplicate() throws IOException, ClassNotFoundException {
+        return null;
     }
 
     /** {@inheritDoc} */

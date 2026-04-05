@@ -7,6 +7,8 @@
 
 package org.red5.server.net.rtmp.event;
 
+import org.red5.server.net.rtmp.event.base.BaseStreamData;
+
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -16,7 +18,7 @@ import java.io.ObjectOutput;
  *
  * @author mondain
  */
-public class ServerBW extends BaseEvent {
+public class ServerBW extends BaseStreamData {
 
     private static final long serialVersionUID = 24487902555977210L;
 
@@ -71,12 +73,6 @@ public class ServerBW extends BaseEvent {
     @Override
     public String toString() {
         return "ServerBW: " + bandwidth;
-    }
-
-    /** {@inheritDoc} */
-    @Override
-    protected void releaseInternal() {
-
     }
 
     /** {@inheritDoc} */

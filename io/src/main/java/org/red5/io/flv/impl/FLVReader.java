@@ -945,6 +945,31 @@ public class FLVReader implements IoConstants, ITagReader, IKeyFrameDataAnalyzer
     }
 
     /**
+     * Alerte le contenu du prochain header sans déplacer le curseur de lecture (Query).
+     * Permet une inspection idempotente du flux.
+     */
+    private ITag consultTag() throws UnsupportedDataTypeException {
+        long currentPos = getCurrentPosition();
+        try {
+            return readTagHeader();
+        } catch (UnsupportedDataTypeException e) {
+            throw new UnsupportedDataTypeException("Erreur type non supporté : " + e.getMessage());
+        } finally {
+            setCurrentPosition(currentPos);
+        }
+    }
+
+    /**
+     * Déplace explicitement le curseur de lecture vers l'avant (Command).
+     * @param bytes Nombre d'octets à consommer dans le flux.
+     */
+    public void advance(int bytes) {
+        long newPos = getCurrentPosition() + bytes; // Calcul de la nouvelle position
+        setCurrentPosition(newPos); // Mise à jour de l'état de l'objet
+        log.debug("Curseur avancé de {} octets. Nouvelle position : {}", bytes, newPos);
+    }
+
+    /**
      * Returns the last tag's timestamp as the files duration.
      *
      * @param flvFile
